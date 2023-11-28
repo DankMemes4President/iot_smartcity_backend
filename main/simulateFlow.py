@@ -18,64 +18,64 @@ credential = DefaultAzureCredential()
 service_client = DigitalTwinsClient(url, credential)
 
 
-def simulate():
-    query_expression = 'SELECT * FROM digitaltwins'
-    query_result = service_client.query_twins(query_expression)
-    # print('DigitalTwins:')
-    random_number = random.randint(1, 20)
-    number_of_cars = []
-    # print("Random Number:", random_number)
-
-    # delete all existing vehicle Twins
-    for key, twin in enumerate(query_result):
-        relationships = service_client.list_relationships(twin["$dtId"])
-        # print(twin["$dtId"])
-        for relationship in relationships:
-            # print(relationship)
-            service_client.delete_relationship(twin["$dtId"],
-                                               relationship["$relationshipId"])  # print("Vehicle" in twin["$dtId"])
-        if "Vehicle" in twin["$dtId"]:
-            service_client.delete_digital_twin(twin["$dtId"])
-
-    for i in range(1, random_number + 1):
-        digital_twin_id = f'Vehicle{i}'
-        temporary_twin = {"$metadata": {"$model": "dtmi:com:adt:dtsample:vehicle;1"}, "id": digital_twin_id,
-                          "name": f"Vehicle {i}"}
-        # create new vehicle twins
-        service_client.upsert_digital_twin(digital_twin_id, temporary_twin)
-        roads = ['RoadA', 'RoadB', 'RoadC']
-
-        # associate vehicles to roads randomly
-        random_road = random.choice(roads)
-        # print("Random Road:", random_road)
-        myRelationship = {"$relationshipId": f"RoadVehicle {i}", "$sourceId": random_road, "$relationshipName": "is_on",
-                          "$targetId": f"Vehicle{i}"}
-        # print(myRelationship)
-        service_client.upsert_relationship(myRelationship["$sourceId"], myRelationship["$relationshipId"],
-                                           myRelationship)
-
-    # check number of vehicles on each road
-    for road in roads:
-        relationships = service_client.list_relationships(road)
-        relationships_list = list(relationships)
-        print("Number of Relationships:", len(relationships_list))
-        number_of_cars.append(len(relationships_list))
-    max_value = max(number_of_cars)
-    max_indices = [i for i, value in enumerate(number_of_cars) if value == max_value]
-    print(number_of_cars)
-    if len(max_indices) > 1:
-        selected_road = random.choice(max_indices)
-        print(f"Traffic light for road {chr(ord('A') + selected_road)} has turned green")
-    else:
-        max_index = number_of_cars.index(max_value)
-        print(f"Traffic light for road {chr(ord('A') + max_index)} has turned green")
+# def simulate():
+#     query_expression = 'SELECT * FROM digitaltwins'
+#     query_result = service_client.query_twins(query_expression)
+#     # print('DigitalTwins:')
+#     random_number = random.randint(1, 20)
+#     number_of_cars = []
+#     # print("Random Number:", random_number)
+#
+#     # delete all existing vehicle Twins
+#     for key, twin in enumerate(query_result):
+#         relationships = service_client.list_relationships(twin["$dtId"])
+#         # print(twin["$dtId"])
+#         for relationship in relationships:
+#             # print(relationship)
+#             service_client.delete_relationship(twin["$dtId"],
+#                                                relationship["$relationshipId"])  # print("Vehicle" in twin["$dtId"])
+#         if "Vehicle" in twin["$dtId"]:
+#             service_client.delete_digital_twin(twin["$dtId"])
+#
+#     for i in range(1, random_number + 1):
+#         digital_twin_id = f'Vehicle{i}'
+#         temporary_twin = {"$metadata": {"$model": "dtmi:com:adt:dtsample:vehicle;1"}, "id": digital_twin_id,
+#                           "name": f"Vehicle {i}"}
+#         # create new vehicle twins
+#         service_client.upsert_digital_twin(digital_twin_id, temporary_twin)
+#         roads = ['RoadA', 'RoadB', 'RoadC']
+#
+#         # associate vehicles to roads randomly
+#         random_road = random.choice(roads)
+#         # print("Random Road:", random_road)
+#         myRelationship = {"$relationshipId": f"RoadVehicle {i}", "$sourceId": random_road, "$relationshipName": "is_on",
+#                           "$targetId": f"Vehicle{i}"}
+#         # print(myRelationship)
+#         service_client.upsert_relationship(myRelationship["$sourceId"], myRelationship["$relationshipId"],
+#                                            myRelationship)
+#
+#     # check number of vehicles on each road
+#     for road in roads:
+#         relationships = service_client.list_relationships(road)
+#         relationships_list = list(relationships)
+#         print("Number of Relationships:", len(relationships_list))
+#         number_of_cars.append(len(relationships_list))
+#     max_value = max(number_of_cars)
+#     max_indices = [i for i, value in enumerate(number_of_cars) if value == max_value]
+#     print(number_of_cars)
+#     if len(max_indices) > 1:
+#         selected_road = random.choice(max_indices)
+#         print(f"Traffic light for road {chr(ord('A') + selected_road)} has turned green")
+#     else:
+#         max_index = number_of_cars.index(max_value)
+#         print(f"Traffic light for road {chr(ord('A') + max_index)} has turned green")
 
 
 # simulate()
 
 
 @shared_task
-def clear_data():
+def start_simulation():
     query_expression = 'SELECT * FROM digitaltwins'
     query_result = service_client.query_twins(query_expression)
     # delete all existing vehicle Twins
@@ -88,11 +88,7 @@ def clear_data():
                                                relationship["$relationshipId"])  # print("Vehicle" in twin["$dtId"])
         if "Vehicle" in twin["$dtId"]:
             service_client.delete_digital_twin(twin["$dtId"])
-    return "cleared data"
-
-
-@shared_task
-def generate_data():
+    print("cleared data")
     random_number = random.randint(1, 20)
     for i in range(1, random_number + 1):
         digital_twin_id = f'Vehicle{i}'
@@ -110,7 +106,30 @@ def generate_data():
         # print(myRelationship)
         service_client.upsert_relationship(myRelationship["$sourceId"], myRelationship["$relationshipId"],
                                            myRelationship)
-        return "generated data"
+        print('generated data')
+        return "cleared and generated data"
+
+
+# @shared_task
+# def generate_data():
+#     random_number = random.randint(1, 20)
+#     for i in range(1, random_number + 1):
+#         digital_twin_id = f'Vehicle{i}'
+#         temporary_twin = {"$metadata": {"$model": "dtmi:com:adt:dtsample:vehicle;1"}, "id": digital_twin_id,
+#                           "name": f"Vehicle {i}"}
+#         # create new vehicle twins
+#         service_client.upsert_digital_twin(digital_twin_id, temporary_twin)
+#         roads = ['RoadA', 'RoadB', 'RoadC']
+#
+#         # associate vehicles to roads randomly
+#         random_road = random.choice(roads)
+#         # print("Random Road:", random_road)
+#         myRelationship = {"$relationshipId": f"RoadVehicle {i}", "$sourceId": random_road, "$relationshipName": "is_on",
+#                           "$targetId": f"Vehicle{i}"}
+#         # print(myRelationship)
+#         service_client.upsert_relationship(myRelationship["$sourceId"], myRelationship["$relationshipId"],
+#                                            myRelationship)
+#         return "generated data"
 
 
 @shared_task
