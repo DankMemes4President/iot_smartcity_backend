@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from main.simulateFlow import start_simulation, get_simulation_result
-
+from main.simulatePark import start_sim_park
 
 @csrf_exempt
 @api_view(["GET"])
@@ -61,6 +61,25 @@ def get_results_initiate(request):
 @csrf_exempt
 @api_view(["GET"])
 def get_results_status(request, task_id):
+    task = AsyncResult(task_id)
+    response_data = {'status': task.status}
+    if task.status == 'SUCCESS':
+        response_data['data'] = task.result
+    return Response(response_data)
+
+
+@csrf_exempt
+@api_view(["GET"])
+def park_sim_initiate(request):
+    # print("dispatching job...")
+    task = start_sim_park.delay()
+    # print("job dispatched...")
+    return Response({"message": "Simulation started", "task": task.id, })
+
+
+@csrf_exempt
+@api_view(["GET"])
+def park_sim_status(request, task_id):
     task = AsyncResult(task_id)
     response_data = {'status': task.status}
     if task.status == 'SUCCESS':
