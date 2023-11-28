@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  rabbit:
+    container_name: rabbitmq-iot-sc
+    image: rabbitmq
+    restart: always
+    ports:
+      - "5690:5672"
+      - "15690:15672"
+    volumes:
+      - ./rabbitmq_logs/:/var/log/rabbitmq/
+
+#  db:
+#    container_name: postgres-iot-sc
+#    image: postgres
+#    restart: always
+#    env_file:
+#      - .env.db
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    container_name: iot-sc
+    build: .
+    command: gunicorn iot_smartcity_backend.wsgi:application --bind 0.0.0.0:8000 --workers=3 --timeout 300 --reload
+    ports:
+      - 8000
+    restart: always
+    volumes:
+      - .:/app
+      - staticfiles:/app/static
+      - mediafiles:/app/media
+
+  nginx:
+    container_name: nginx-iot-sc
+    image: nginx:mainline-alpine
+    restart: always
+    ports:
+      - 1400:80
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - staticfiles:/app/static
+      - mediafiles:/app/media
+    depends_on:
+      - web
+  celery:
+    container_name: iot_sc_celery_worker
+    restart: always
+    build:
+      context: .
+    command: celery -A iot_smartcity_backend worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+      - rabbit
+volumes:
+  staticfiles:
+  mediafiles:
+  postgres_data:
